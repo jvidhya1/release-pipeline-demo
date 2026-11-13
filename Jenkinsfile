@@ -1,5 +1,8 @@
 pipeline {
   agent any
+  parameters {
+    string(name: 'VERSION', defaultValue: '1.0', description: 'Release version')
+  }
   stages {
     stage('Checkout') {
       steps {
@@ -8,7 +11,9 @@ pipeline {
     }
     stage('Build') {
       steps {
+        echo "Building release ${params.VERSION}"
         sh 'sh hello.sh'
+        sh 'echo "Release $VERSION built on $(date)" > release-$VERSION.txt'
         sh 'ls -l'
       }
     }
@@ -19,18 +24,21 @@ pipeline {
     }
     stage('Approve Production') {
       steps {
-        input message: 'Approve release to Production?', ok: 'Deploy'
+        input message: "Approve release ${params.VERSION} to Production?", ok: 'Deploy'
       }
     }
     stage('Deploy') {
       steps {
-        echo 'Deploying release-demo...'
+        echo "Deploying release-demo ${params.VERSION}..."
       }
     }
   }
   post {
+    success {
+      archiveArtifacts artifacts: 'release-*.txt'
+    }
     failure {
-      echo 'Build failed - rollback would run here'
+      echo "Release ${params.VERSION} failed - rollback would run here"
     }
   }
 }
